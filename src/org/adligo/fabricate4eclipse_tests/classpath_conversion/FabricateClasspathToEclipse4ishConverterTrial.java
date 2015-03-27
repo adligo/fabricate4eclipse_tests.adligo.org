@@ -8,6 +8,7 @@ import org.adligo.fabricate.common.system.FabSystem;
 import org.adligo.fabricate.models.common.FabricationRoutineCreationException;
 import org.adligo.fabricate.models.common.I_FabricationMemory;
 import org.adligo.fabricate.models.common.I_FabricationMemoryMutant;
+import org.adligo.fabricate.models.common.I_FabricationRoutine;
 import org.adligo.fabricate.models.common.I_Parameter;
 import org.adligo.fabricate.models.common.I_RoutineFactory;
 import org.adligo.fabricate.models.common.I_RoutineMemory;
@@ -21,6 +22,8 @@ import org.adligo.fabricate.models.fabricate.FabricateMutant;
 import org.adligo.fabricate.models.project.ProjectMutant;
 import org.adligo.fabricate.repository.I_RepositoryFactory;
 import org.adligo.fabricate.repository.I_RepositoryPathBuilder;
+import org.adligo.fabricate.routines.I_FabricateAware;
+import org.adligo.fabricate.routines.I_ProjectAware;
 import org.adligo.fabricate.routines.implicit.FindSrcTrait;
 import org.adligo.fabricate4eclipse.classpath_conversion.FabricateClasspathToEclipse4ishConverter;
 import org.adligo.tests4j.system.shared.trials.SourceFileScope;
@@ -90,6 +93,16 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     }
     
     repoFactoryMock_ = mock(I_RepositoryFactory.class);
+  }
+  
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testClassInstanceOf() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    assertTrue(converter instanceof I_FabricationRoutine);
+    assertTrue(converter instanceof I_FabricateAware);
+    assertTrue(converter instanceof I_ProjectAware);
+    
   }
   
   @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
