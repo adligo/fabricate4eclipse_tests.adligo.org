@@ -14,6 +14,7 @@ import org.adligo.fabricate.models.common.I_RoutineFactory;
 import org.adligo.fabricate.models.common.I_RoutineMemory;
 import org.adligo.fabricate.models.common.I_RoutineMemoryMutant;
 import org.adligo.fabricate.models.common.Parameter;
+import org.adligo.fabricate.models.common.ParameterMutant;
 import org.adligo.fabricate.models.dependencies.DependencyMutant;
 import org.adligo.fabricate.models.dependencies.I_Ide;
 import org.adligo.fabricate.models.dependencies.IdeMutant;
@@ -24,6 +25,7 @@ import org.adligo.fabricate.repository.I_RepositoryFactory;
 import org.adligo.fabricate.repository.I_RepositoryPathBuilder;
 import org.adligo.fabricate.routines.I_FabricateAware;
 import org.adligo.fabricate.routines.I_ProjectAware;
+import org.adligo.fabricate.routines.I_RepositoryFactoryAware;
 import org.adligo.fabricate.routines.implicit.FindSrcTrait;
 import org.adligo.fabricate4eclipse.classpath_conversion.FabricateClasspathToEclipse4ishConverter;
 import org.adligo.tests4j.system.shared.trials.SourceFileScope;
@@ -32,16 +34,13 @@ import org.adligo.tests4j_4mockito.MockMethod;
 import org.adligo.tests4j_4mockito.MockitoSourceFileTrial;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
-@SourceFileScope (sourceClass=FabricateClasspathToEclipse4ishConverter.class, minCoverage=0.0)
+@SourceFileScope (sourceClass=FabricateClasspathToEclipse4ishConverter.class, minCoverage=80.0)
 public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSourceFileTrial {
-  private ByteArrayOutputStream baos_;
   private FabSystem sysMock_;
   private I_FabFileIO fileMock_;
   private I_FabXmlFileIO xmlIoMock_;
@@ -68,8 +67,6 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     mockLog_ = mock(I_FabLog.class);
     when(sysMock_.getLog()).thenReturn(mockLog_);
     
-    baos_ = new ByteArrayOutputStream();
-    PrintStream printStream = new PrintStream(baos_);
     
     findSrcMock_ = mock(FindSrcTrait.class);
     try {
@@ -95,19 +92,18 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     repoFactoryMock_ = mock(I_RepositoryFactory.class);
   }
   
-  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
   @Test
   public void testClassInstanceOf() throws Exception {
     FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
     assertTrue(converter instanceof I_FabricationRoutine);
     assertTrue(converter instanceof I_FabricateAware);
+    assertTrue(converter instanceof I_RepositoryFactoryAware);
     assertTrue(converter instanceof I_ProjectAware);
-    
   }
   
   @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
   @Test
-  public void testMethodRunTwoSrcDirs() throws Exception {
+  public void testMethodRunSimpleTwoSrcDirs() throws Exception {
     FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
@@ -136,6 +132,8 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     List<String> srcDirs = new ArrayList<String>();
     srcDirs.add("/foo/bar/srcA");
     srcDirs.add("/foo/bar/srcB");
+    //check removal of duplicate
+    srcDirs.add("/foo/bar/srcA");
     
     File aDirMock = mock(File.class);
     when(aDirMock.getName()).thenReturn("srcA");
@@ -173,7 +171,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
   
   @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
   @Test
-  public void testMethodRunTwoSrcDirsThreeDepsOneIdeTwoProject() throws Exception {
+  public void testMethodRunSimpleTwoSrcDirsThreeDepsOneIdeTwoProject() throws Exception {
     FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
@@ -185,16 +183,20 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     
     ProjectMutant pm = new ProjectMutant();
     DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
     pm.addNormalizedDependency(depA);
     DependencyMutant depB = new DependencyMutant();
     pm.addNormalizedDependency(depB);
+    depB.setArtifact("depB");
     DependencyMutant depC = new DependencyMutant();
+    depC.setArtifact("depC");
     List<I_Ide> cchildren = new ArrayList<I_Ide>();
     IdeMutant im = new IdeMutant();
     im.setName("eclipse");
     List<I_Parameter> ideChild = new ArrayList<I_Parameter>();
     ideChild.add(new Parameter("ideKey", "ideValue"));
     im.setChildren(ideChild);
+    cchildren.add(im);
     depC.setChildren(cchildren);
     
     pm.addNormalizedDependency(depC);
@@ -255,7 +257,9 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depA\"/>\n" +
         "\t<classpathentry kind=\"var\" path=\"/foo/bar/depB\"/>\n" +
+        "\t<classpathentry kind=\"ideKey\" path=\"ideValue\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_j\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_k\"/>\n" +
         "</classpath>\n" 
@@ -266,7 +270,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
   
   @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
   @Test
-  public void testMethodRunTwoSrcDirsThreeDepsOneIdeTwoProject_EnvVar() throws Exception {
+  public void testMethodRunSimpleTwoSrcDirsThreeDepsTwoProject_EnvVar() throws Exception {
     FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
@@ -280,10 +284,17 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     
     ProjectMutant pm = new ProjectMutant();
     DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
     pm.addNormalizedDependency(depA);
     DependencyMutant depB = new DependencyMutant();
     pm.addNormalizedDependency(depB);
+    depB.setArtifact("depB");
+    DependencyMutant depC = new DependencyMutant();
+    depC.setArtifact("depC");
+    pm.addNormalizedDependency(depC);
     
+    pm.addProjectDependency(new ProjectDependencyMutant("project_j"));
+    pm.addProjectDependency(new ProjectDependencyMutant("project_k"));
     pm.setDir("/foo/pdir/");
     converter.setProject(pm);
     
@@ -312,6 +323,10 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     when(aDirMockB.getName()).thenReturn("srcB");
     when(fileMock_.instance("/foo/bar/srcB")).thenReturn(aDirMockB);
     
+    File aDirMockC = mock(File.class);
+    when(aDirMockC.getName()).thenReturn("srcC");
+    when(fileMock_.instance("/foo/bar/srcC")).thenReturn(aDirMockB);
+    
     MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
     doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
     
@@ -327,6 +342,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     when(repoFactoryMock_.createRepositoryPathBuilder("/fabRepo")).thenReturn(repo);
     when(repo.getArtifactPath(depA)).thenReturn("/fabRepo/depA");
     when(repo.getArtifactPath(depB)).thenReturn("/fabRepo/depB");
+    when(repo.getArtifactPath(depC)).thenReturn("/fabRepo/depC");
     
     converter.run();
     ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
@@ -338,7 +354,398 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
         "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depC\"/>\n" +
+        "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_j\"/>\n" +
+        "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_k\"/>\n" +
+        "</classpath>\n" 
+            , new String(bytes));
+    assertSame(out, writeFileMethod.getArgs(0)[1]);
+  }
+  
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testMethodRunStrenuousDuplicateDependency() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    
+    FabricateMutant fm = new FabricateMutant();
+    fm.setFabricateRepository("fabRepo");
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
+    depA.setFileName("1");
+    pm.addNormalizedDependency(depA);
+    DependencyMutant depA2 = new DependencyMutant();
+    depA2.setArtifact("depA");
+    depA2.setFileName("2");
+    pm.addNormalizedDependency(depA2);
+
+    
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    I_FabricationMemoryMutant fabMemory = mock(I_FabricationMemoryMutant.class);
+    I_RoutineMemoryMutant routineMemory = mock(I_RoutineMemoryMutant.class);
+    converter.setupInitial(fabMemory, routineMemory);
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertSame(fabMemory, findSrcMockSetupMutants_.getArgs(0)[0]);
+    assertSame(routineMemory, findSrcMockSetupMutants_.getArgs(0)[1]);
+    assertEquals(1, findSrcMockSetupMutants_.count());
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertEquals(0, findSrcMockSetProject_.count());
+    assertEquals(0, findSrcMockSetup_.count());
+    
+    List<String> srcDirs = new ArrayList<String>();
+    srcDirs.add("/foo/bar/srcA");
+    
+    File aDirMock = mock(File.class);
+    when(aDirMock.getName()).thenReturn("srcA");
+    when(fileMock_.instance("/foo/bar/srcA")).thenReturn(aDirMock);
+    
+    MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
+    doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
+    
+    MockMethod<Boolean> existsMethod = new MockMethod<Boolean>();
+    doAnswer(existsMethod).when(fileMock_).exists(any());
+    
+    OutputStream out = mock(OutputStream.class);
+    when(fileMock_.newFileOutputStream("/foo/pdir/.classpath")).thenReturn(out);
+    MockMethod<Void> writeFileMethod = new MockMethod<Void>();
+    doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
+    
+    I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
+    when(repoFactoryMock_.createRepositoryPathBuilder("fabRepo")).thenReturn(repo);
+    when(repo.getArtifactPath(depA)).thenReturn("/foo/bar/depA");
+    when(repo.getArtifactPath(depA2)).thenReturn("/foo/bar/depA");
+    
+    converter.run();
+    ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
+    int size = bais.available();
+    byte [] bytes = new byte[size];
+    bais.read(bytes);
+    assertUniform(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        "<classpath>\n" +
+        "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depA\"/>\n" +
+        "</classpath>\n" 
+            , new String(bytes));
+    assertSame(out, writeFileMethod.getArgs(0)[1]);
+  }
+
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testMethodRunStrenuousDuplicateDependenciesWithEnvVar() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    
+    when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("FAB_REPO");
+    
+    FabricateMutant fm = new FabricateMutant();
+    fm.setFabricateRepository("/fabRepo");
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
+    depA.setVersion("snapshot");
+    pm.addNormalizedDependency(depA);
+    DependencyMutant depA1 = new DependencyMutant();
+    pm.addNormalizedDependency(depA1);
+    depA1.setArtifact("depA");
+    
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    I_FabricationMemory fabMemory = mock(I_FabricationMemory.class);
+    I_RoutineMemory routineMemory = mock(I_RoutineMemory.class);
+    converter.setup(fabMemory, routineMemory);
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertSame(fabMemory, findSrcMockSetup_.getArgs(0)[0]);
+    assertSame(routineMemory, findSrcMockSetup_.getArgs(0)[1]);
+    assertEquals(1, findSrcMockSetup_.count());
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertEquals(0, findSrcMockSetProject_.count());
+    assertEquals(0, findSrcMockSetupMutants_.count());
+    
+    List<String> srcDirs = new ArrayList<String>();
+    srcDirs.add("/foo/bar/srcA");
+    
+    File aDirMock = mock(File.class);
+    when(aDirMock.getName()).thenReturn("srcA");
+    when(fileMock_.instance("/foo/bar/srcA")).thenReturn(aDirMock);
+    
+    MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
+    doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
+    
+    MockMethod<Boolean> existsMethod = new MockMethod<Boolean>();
+    doAnswer(existsMethod).when(fileMock_).exists(any());
+    
+    OutputStream out = mock(OutputStream.class);
+    when(fileMock_.newFileOutputStream("/foo/pdir/.classpath")).thenReturn(out);
+    MockMethod<Void> writeFileMethod = new MockMethod<Void>();
+    doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
+    
+    I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
+    when(repoFactoryMock_.createRepositoryPathBuilder("/fabRepo")).thenReturn(repo);
+    when(repo.getArtifactPath(depA)).thenReturn("/fabRepo/depA");
+    when(repo.getArtifactPath(depA1)).thenReturn("/fabRepo/depA");
+    
+    converter.run();
+    ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
+    int size = bais.available();
+    byte [] bytes = new byte[size];
+    bais.read(bytes);
+    assertUniform(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        "<classpath>\n" +
+        "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
+        "</classpath>\n" 
+            , new String(bytes));
+    assertSame(out, writeFileMethod.getArgs(0)[1]);
+  }
+  
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testMethodRunStrenuousDuplicateDependencyIde() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    
+    FabricateMutant fm = new FabricateMutant();
+    fm.setFabricateRepository("fabRepo");
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
+    depA.setFileName("1");
+    
+    List<I_Ide> cchildren = new ArrayList<I_Ide>();
+    IdeMutant im = new IdeMutant();
+    im.setName("eclipse");
+    List<I_Parameter> ideChild = new ArrayList<I_Parameter>();
+    ideChild.add(new Parameter("ideKey", "ideValue"));
+    ideChild.add(new Parameter("ideKey", "ideValue"));
+    im.setChildren(ideChild);
+    cchildren.add(im);
+    depA.setChildren(cchildren);
+    
+    pm.addNormalizedDependency(depA);
+
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    I_FabricationMemoryMutant fabMemory = mock(I_FabricationMemoryMutant.class);
+    I_RoutineMemoryMutant routineMemory = mock(I_RoutineMemoryMutant.class);
+    converter.setupInitial(fabMemory, routineMemory);
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertSame(fabMemory, findSrcMockSetupMutants_.getArgs(0)[0]);
+    assertSame(routineMemory, findSrcMockSetupMutants_.getArgs(0)[1]);
+    assertEquals(1, findSrcMockSetupMutants_.count());
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertEquals(0, findSrcMockSetProject_.count());
+    assertEquals(0, findSrcMockSetup_.count());
+    
+    List<String> srcDirs = new ArrayList<String>();
+    srcDirs.add("/foo/bar/srcA");
+    
+    File aDirMock = mock(File.class);
+    when(aDirMock.getName()).thenReturn("srcA");
+    when(fileMock_.instance("/foo/bar/srcA")).thenReturn(aDirMock);
+    
+    MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
+    doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
+    
+    MockMethod<Boolean> existsMethod = new MockMethod<Boolean>();
+    doAnswer(existsMethod).when(fileMock_).exists(any());
+    
+    OutputStream out = mock(OutputStream.class);
+    when(fileMock_.newFileOutputStream("/foo/pdir/.classpath")).thenReturn(out);
+    MockMethod<Void> writeFileMethod = new MockMethod<Void>();
+    doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
+    
+    I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
+    when(repoFactoryMock_.createRepositoryPathBuilder("fabRepo")).thenReturn(repo);
+    when(repo.getArtifactPath(depA)).thenReturn("/foo/bar/depA");
+    
+    converter.run();
+    ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
+    int size = bais.available();
+    byte [] bytes = new byte[size];
+    bais.read(bytes);
+    assertUniform(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        "<classpath>\n" +
+        "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
+        "\t<classpathentry kind=\"ideKey\" path=\"ideValue\"/>\n" +
+        "</classpath>\n" 
+            , new String(bytes));
+    assertSame(out, writeFileMethod.getArgs(0)[1]);
+  }
+  
+  
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testMethodRunStrenuousDuplicateProjectDependencies() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    
+    
+    FabricateMutant fm = new FabricateMutant();
+    fm.setFabricateRepository("/fabRepo");
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    
+    pm.addProjectDependency(new ProjectDependencyMutant("project_j"));
+    
+    ProjectDependencyMutant pdmB = new ProjectDependencyMutant("project_j");
+    pdmB.setPlatform("GWT");
+    pm.addProjectDependency(pdmB);
+    
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    I_FabricationMemory fabMemory = mock(I_FabricationMemory.class);
+    I_RoutineMemory routineMemory = mock(I_RoutineMemory.class);
+    converter.setup(fabMemory, routineMemory);
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertSame(fabMemory, findSrcMockSetup_.getArgs(0)[0]);
+    assertSame(routineMemory, findSrcMockSetup_.getArgs(0)[1]);
+    assertEquals(1, findSrcMockSetup_.count());
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertEquals(0, findSrcMockSetProject_.count());
+    assertEquals(0, findSrcMockSetupMutants_.count());
+    
+    List<String> srcDirs = new ArrayList<String>();
+    srcDirs.add("/foo/bar/srcA");
+    
+    File aDirMock = mock(File.class);
+    when(aDirMock.getName()).thenReturn("srcA");
+    when(fileMock_.instance("/foo/bar/srcA")).thenReturn(aDirMock);
+    
+    MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
+    doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
+    
+    MockMethod<Boolean> existsMethod = new MockMethod<Boolean>();
+    doAnswer(existsMethod).when(fileMock_).exists(any());
+    
+    OutputStream out = mock(OutputStream.class);
+    when(fileMock_.newFileOutputStream("/foo/pdir/.classpath")).thenReturn(out);
+    MockMethod<Void> writeFileMethod = new MockMethod<Void>();
+    doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
+    
+    I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
+    when(repoFactoryMock_.createRepositoryPathBuilder("/fabRepo")).thenReturn(repo);
+    
+    converter.run();
+    ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
+    int size = bais.available();
+    byte [] bytes = new byte[size];
+    bais.read(bytes);
+    assertUniform(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        "<classpath>\n" +
+        "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
+        "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_j\"/>\n" +
+        "</classpath>\n" 
+            , new String(bytes));
+    assertSame(out, writeFileMethod.getArgs(0)[1]);
+  }
+  
+  @SuppressWarnings({"boxing", "unchecked", "rawtypes"})
+  @Test
+  public void testMethodRunStrenuousIdeAttributesWithDuplicates() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    
+    FabricateMutant fm = new FabricateMutant();
+    ParameterMutant fabIde = new ParameterMutant();
+    fabIde.setKey("ide");
+    fabIde.setValue("eclipse");
+    fabIde.addChild(new ParameterMutant("ideKeyA", "fabIdeValueA"));
+    fabIde.addChild(new ParameterMutant("ideKeyB", "fabIdeValueB"));
+    fm.addAttribute(fabIde);
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    ParameterMutant projIde = new ParameterMutant();
+    projIde.setKey("ide");
+    projIde.setValue("eclipse");
+    projIde.addChild(new ParameterMutant("ideKeyB", "projIdeValueB"));
+    projIde.addChild(new ParameterMutant("ideKeyC", "projIdeValueC"));
+    projIde.addChild(new ParameterMutant("ideKeyC", "projIdeValueC"));
+    pm.addAttribute(projIde);
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    I_FabricationMemoryMutant fabMemory = mock(I_FabricationMemoryMutant.class);
+    I_RoutineMemoryMutant routineMemory = mock(I_RoutineMemoryMutant.class);
+    converter.setupInitial(fabMemory, routineMemory);
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertSame(fabMemory, findSrcMockSetupMutants_.getArgs(0)[0]);
+    assertSame(routineMemory, findSrcMockSetupMutants_.getArgs(0)[1]);
+    assertEquals(1, findSrcMockSetupMutants_.count());
+    assertSame(fm, findSrcMockSetFabricate_.getArg(0));
+    assertEquals(1, findSrcMockSetFabricate_.count());
+    assertEquals(0, findSrcMockSetProject_.count());
+    assertEquals(0, findSrcMockSetup_.count());
+    
+    List<String> srcDirs = new ArrayList<String>();
+    srcDirs.add("/foo/bar/srcA");
+    
+    File aDirMock = mock(File.class);
+    when(aDirMock.getName()).thenReturn("srcA");
+    when(fileMock_.instance("/foo/bar/srcA")).thenReturn(aDirMock);
+    
+    
+    MockMethod<List<String>> findSrcOutput = new MockMethod<List<String>>(srcDirs);
+    doAnswer(findSrcOutput).when(findSrcMock_).getOutput();
+    
+    MockMethod<Boolean> existsMethod = new MockMethod<Boolean>();
+    doAnswer(existsMethod).when(fileMock_).exists(any());
+    
+    OutputStream out = mock(OutputStream.class);
+    when(fileMock_.newFileOutputStream("/foo/pdir/.classpath")).thenReturn(out);
+    MockMethod<Void> writeFileMethod = new MockMethod<Void>();
+    doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
+    
+    converter.run();
+    ByteArrayInputStream bais = (ByteArrayInputStream) writeFileMethod.getArgs(0)[0];
+    int size = bais.available();
+    byte [] bytes = new byte[size];
+    bais.read(bytes);
+    assertUniform(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+        "<classpath>\n" +
+        "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
+        "\t<classpathentry kind=\"ideKeyA\" path=\"fabIdeValueA\"/>\n" +
+        "\t<classpathentry kind=\"ideKeyB\" path=\"projIdeValueB\"/>\n" +
+        "\t<classpathentry kind=\"ideKeyC\" path=\"projIdeValueC\"/>\n" +
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
