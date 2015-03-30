@@ -19,7 +19,8 @@ public class A_Fab4EclipsePkgTrials implements I_Tests4J_TrialList {
 			
 			A_Fab4EclipsePkgTrials me = new A_Fab4EclipsePkgTrials();
 			params.addTrials(me);
-			
+			params.setMetaTrialClass(Fab4EclipseMetaTrial.class);
+	    
 			Tests4J.run(params);
 		} catch (Exception x) {
 			x.printStackTrace();
