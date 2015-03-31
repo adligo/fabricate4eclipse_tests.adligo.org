@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pns:fabricate_project xmlns:pns="http://www.adligo.org/fabricate/xml/io_v1/project_v1_0" 
-    xmlns:lns="http://www.adligo.org/fabricate/xml/io_v1/library_v1_0" 
+<pns:fabricate_project xmlns:pns="http://www.adligo.org/fabricate/xml/io_v1/project_v1_0.xsd" 
+    xmlns:lns="http://www.adligo.org/fabricate/xml/io_v1/library_v1_0.xsd" 
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
     <pns:dependencies>
         <lns:library>jacoco</lns:library>
         <lns:library>mockito</lns:library>
         
-        <lns:project>tests4j.adligo.org</lns:project>
-        <lns:project>tests4j_4jacoco.adligo.org</lns:project>
-        <lns:project>tests4j_4mockito.adligo.org</lns:project>
-        <lns:project>tests4j_tests.adligo.org</lns:project>
-        <lns:project>fabricate.adligo.org</lns:project>
-        <lns:project>fabricate4eclipse.adligo.org</lns:project>
+        <pns:project>tests4j.adligo.org</pns:project>
+        <pns:project>tests4j_4jacoco.adligo.org</pns:project>
+        <pns:project>tests4j_4mockito.adligo.org</pns:project>
+        <pns:project>tests4j_tests.adligo.org</pns:project>
+        <pns:project>fabricate.adligo.org</pns:project>
+        <pns:project>fabricate4eclipse.adligo.org</pns:project>
     </pns:dependencies>
     <pns:stages>
         <pns:stage name="jar" />
