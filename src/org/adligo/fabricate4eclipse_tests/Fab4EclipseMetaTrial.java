@@ -18,7 +18,7 @@ import org.adligo.tests4j.system.shared.trials.TrialTypeAnnotation;
 
 @TrialTypeAnnotation (type=TrialType.META_TRIAL_TYPE)
 public class Fab4EclipseMetaTrial  extends AbstractTrial implements I_MetaTrial {
-	private static final long TESTS = 27;
+	private static final long TESTS = 28;
 	private static final int TRIALS = 3;
 	
 	private ClassesWithSourceFileTrialsCalculator calculator_;

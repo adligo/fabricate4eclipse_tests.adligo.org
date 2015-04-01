@@ -11,6 +11,7 @@ import org.adligo.fabricate.models.common.I_FabricationMemory;
 import org.adligo.fabricate.models.common.I_FabricationMemoryMutant;
 import org.adligo.fabricate.models.common.I_FabricationRoutine;
 import org.adligo.fabricate.models.common.I_Parameter;
+import org.adligo.fabricate.models.common.I_RoutineBrief;
 import org.adligo.fabricate.models.common.I_RoutineFactory;
 import org.adligo.fabricate.models.common.I_RoutineMemory;
 import org.adligo.fabricate.models.common.I_RoutineMemoryMutant;
@@ -29,6 +30,8 @@ import org.adligo.fabricate.routines.I_ProjectAware;
 import org.adligo.fabricate.routines.I_RepositoryFactoryAware;
 import org.adligo.fabricate.routines.implicit.FindSrcTrait;
 import org.adligo.fabricate4eclipse.classpath_conversion.FabricateClasspathToEclipse4ishConverter;
+import org.adligo.tests4j.shared.asserts.common.ExpectedThrowable;
+import org.adligo.tests4j.shared.asserts.common.I_Thrower;
 import org.adligo.tests4j.system.shared.trials.SourceFileScope;
 import org.adligo.tests4j.system.shared.trials.Test;
 import org.adligo.tests4j_4mockito.MockMethod;
@@ -47,6 +50,8 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
   private I_FabFileIO fileMock_;
   private I_FabXmlFileIO xmlIoMock_;
   private I_FabLog mockLog_;
+  private MockMethod<Void> logPrintln_;
+  
   private FindSrcTrait findSrcMock_;
   private MockMethod<Void> findSrcMockSetFabricate_;
   private MockMethod<Void> findSrcMockSetProject_;
@@ -59,6 +64,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
   private I_FabricationMemory<Object> fabMemory_;
   private I_RoutineMemory<Object> routineMemory_;
   private List<String> defaultPlatforms_;
+  private I_RoutineBrief brief_;
   
   @SuppressWarnings("unchecked")
   public void beforeTests() {
@@ -87,7 +93,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
       findSrcMockSetup_ = new MockMethod<Void>();
       doAnswer(findSrcMockSetup_).when(findSrcMock_).setup(any(), any());
       
-      findSrcMockSetupMutants_ = new MockMethod<Boolean>();
+      findSrcMockSetupMutants_ = new MockMethod<Boolean>(true, true);
       doAnswer(findSrcMockSetupMutants_).when(findSrcMock_).setupInitial(any(), any());
       
       traitFactoryMock_ = mock(I_RoutineFactory.class);
@@ -111,7 +117,12 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     
     repoFactoryMock_ = mock(I_RepositoryFactory.class);
     
+    brief_ = mock(I_RoutineBrief.class);
+    when(brief_.getName()).thenReturn("classpath2eclipse");
     
+    logPrintln_ = new MockMethod<Void>();
+    doAnswer(logPrintln_).when(mockLog_).println(any());
+    when(mockLog_.isLogEnabled(any())).thenReturn(false);
   }
   
   @Test
@@ -130,6 +141,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     when(fileMock_.getNameSeparator()).thenReturn("\\");
     
@@ -199,11 +211,16 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"C:/fabRepo/depA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"C:/fabRepo/depB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depB\"/>\n" +
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -213,6 +230,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     when(fileMock_.getNameSeparator()).thenReturn("\\");
     
@@ -290,6 +308,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -299,6 +322,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
     converter.setFabricate(fm);
@@ -357,6 +381,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -366,9 +395,10 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
-    fm.setFabricateRepository("fabRepo");
+    fm.setFabricateRepository("/foo/bar/");
     converter.setFabricate(fm);
     
     ProjectMutant pm = new ProjectMutant();
@@ -396,7 +426,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     pm.setDir("/foo/pdir/");
     converter.setProject(pm);
     
-    converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_);
+    assertTrue(converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_));
     assertSame(fm, findSrcMockSetFabricate_.getArg(0));
     assertEquals(1, findSrcMockSetFabricate_.count());
     assertSame(fabMemoryMutant_, findSrcMockSetupMutants_.getArgs(0)[0]);
@@ -431,7 +461,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
     
     I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
-    when(repoFactoryMock_.createRepositoryPathBuilder("fabRepo")).thenReturn(repo);
+    when(repoFactoryMock_.createRepositoryPathBuilder("/foo/bar/")).thenReturn(repo);
     when(repo.getArtifactPath(depA)).thenReturn("/foo/bar/depA");
     when(repo.getArtifactPath(depB)).thenReturn("/foo/bar/depB");
     
@@ -445,14 +475,19 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcB\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depB\"/>\n" +
         "\t<classpathentry kind=\"ideKey\" path=\"ideValue\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_j\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_k\"/>\n" +
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   
@@ -463,8 +498,10 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
-    when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("FAB_REPO");
+    when(sysMock_.hasArg(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn(true);
+    when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("FAB_REPO2");
     
     FabricateMutant fm = new FabricateMutant();
     fm.setFabricateRepository("/fabRepo/");
@@ -540,9 +577,9 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcB\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depB\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depC\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO2/depA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO2/depB\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO2/depC\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_j\"/>\n" +
         "\t<classpathentry combineaccessrules=\"false\" kind=\"src\" path=\"/project_k\"/>\n" +
         "</classpath>\n" 
@@ -552,14 +589,61 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
   
   @SuppressWarnings({"boxing", "unchecked"})
   @Test
+  public void testMethodRunSimpleTwoSrcDirsThreeDepsTwoProject_EnvVarException() throws Exception {
+    FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
+    converter.setTraitFactory(traitFactoryMock_);
+    converter.setRepositoryFactory(repoFactoryMock_);
+    converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
+    
+    when(sysMock_.hasArg(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn(true);
+    when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("");
+    
+    FabricateMutant fm = new FabricateMutant();
+    fm.setFabricateRepository("/fabRepo/");
+    converter.setFabricate(fm);
+    
+    ProjectMutant pm = new ProjectMutant();
+    DependencyMutant depA = new DependencyMutant();
+    depA.setArtifact("depA");
+    pm.addNormalizedDependency(depA);
+    DependencyMutant depB = new DependencyMutant();
+    pm.addNormalizedDependency(depB);
+    depB.setArtifact("depB");
+    DependencyMutant depC = new DependencyMutant();
+    depC.setArtifact("depC");
+    pm.addNormalizedDependency(depC);
+    
+    pm.addProjectDependency(new ProjectDependencyMutant("project_j"));
+    pm.addProjectDependency(new ProjectDependencyMutant("project_k"));
+    pm.setDir("/foo/pdir/");
+    converter.setProject(pm);
+    
+    
+    assertThrown(new ExpectedThrowable(new IllegalStateException(
+        "The following command line argument is required for command classpath2eclipse;\n" +
+        "eclipseEnvVariable")),
+        new I_Thrower() {
+          
+          @Override
+          public void run() throws Throwable {
+            converter.setup(fabMemory_, routineMemory_);
+          }
+        });
+    
+  }
+  
+  @SuppressWarnings({"boxing", "unchecked"})
+  @Test
   public void testMethodRunStrenuousDuplicateDependency() throws Exception {
     FabricateClasspathToEclipse4ishConverter converter = new FabricateClasspathToEclipse4ishConverter();
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
-    fm.setFabricateRepository("fabRepo");
+    fm.setFabricateRepository("/foo/bar/");
     converter.setFabricate(fm);
     
     ProjectMutant pm = new ProjectMutant();
@@ -576,7 +660,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     pm.setDir("/foo/pdir/");
     converter.setProject(pm);
     
-    converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_);
+    assertTrue(converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_));
     assertSame(fm, findSrcMockSetFabricate_.getArg(0));
     assertEquals(1, findSrcMockSetFabricate_.count());
     assertSame(fabMemoryMutant_, findSrcMockSetupMutants_.getArgs(0)[0]);
@@ -606,7 +690,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
     
     I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
-    when(repoFactoryMock_.createRepositoryPathBuilder("fabRepo")).thenReturn(repo);
+    when(repoFactoryMock_.createRepositoryPathBuilder("/foo/bar/")).thenReturn(repo);
     when(repo.getArtifactPath(depA)).thenReturn("/foo/bar/depA");
     when(repo.getArtifactPath(depA2)).thenReturn("/foo/bar/depA");
     
@@ -619,10 +703,15 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
 
   @SuppressWarnings({"boxing", "unchecked"})
@@ -632,6 +721,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("FAB_REPO");
     
@@ -707,6 +797,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
     fm.setFabricateRepository("fabRepo");
@@ -778,6 +869,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -787,6 +883,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
     fm.setFabricateRepository("fabRepo");
@@ -858,6 +955,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   
@@ -868,7 +970,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
-    
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
     fm.setFabricateRepository("/fabRepo/");
@@ -930,6 +1032,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -939,6 +1046,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
     ParameterMutant fabIde = new ParameterMutant();
@@ -960,7 +1068,8 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     pm.setDir("/foo/pdir/");
     converter.setProject(pm);
     
-    converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_);
+    assertTrue(converter.setupInitial(fabMemoryMutant_, routineMemoryMutant_));
+    
     assertSame(fm, findSrcMockSetFabricate_.getArg(0));
     assertEquals(1, findSrcMockSetFabricate_.count());
     assertSame(fabMemoryMutant_, findSrcMockSetupMutants_.getArgs(0)[0]);
@@ -1005,6 +1114,11 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -1014,9 +1128,10 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     FabricateMutant fm = new FabricateMutant();
-    fm.setFabricateRepository("fabRepo");
+    fm.setFabricateRepository("/foo/bar/");
     converter.setFabricate(fm);
     
     ProjectMutant pm = new ProjectMutant();
@@ -1070,7 +1185,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     doAnswer(writeFileMethod).when(fileMock_).writeFile(any(), any());
     
     I_RepositoryPathBuilder repo = mock(I_RepositoryPathBuilder.class);
-    when(repoFactoryMock_.createRepositoryPathBuilder("fabRepo")).thenReturn(repo);
+    when(repoFactoryMock_.createRepositoryPathBuilder("/foo/bar/")).thenReturn(repo);
     when(repo.getArtifactPath(depA)).thenReturn("/foo/bar/depA");
     when(repo.getArtifactPath(depA2)).thenReturn("/foo/bar/depA");
     
@@ -1083,10 +1198,15 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<classpath>\n" +
         "\t<classpathentry kind=\"src\" path=\"srcA\"/>\n" +
-        "\t<classpathentry kind=\"var\" path=\"/foo/bar/depA\"/>\n" +
+        "\t<classpathentry kind=\"var\" path=\"FAB_REPO/depA\"/>\n" +
         "</classpath>\n" 
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
+    
+    assertEquals("The following command line argument was NOT provided for command " +
+        "classpath2eclipse using default 'FAB_REPO';\n" +
+        "eclipseEnvVariable", logPrintln_.getArg(0));
+    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -1096,6 +1216,7 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
     converter.setTraitFactory(traitFactoryMock_);
     converter.setRepositoryFactory(repoFactoryMock_);
     converter.setSystem(sysMock_);
+    converter.setBrief(brief_);
     
     when(sysMock_.getArgValue(FabricateClasspathToEclipse4ishConverter.ECLIPSE_ENV_VAR)).thenReturn("FAB_REPO");
     
