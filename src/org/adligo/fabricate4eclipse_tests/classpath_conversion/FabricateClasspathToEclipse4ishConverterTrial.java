@@ -217,10 +217,6 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
     
-    assertEquals("The following command line argument was NOT provided for command " +
-        "classpath2eclipse using default 'FAB_REPO';\n" +
-        "eclipseEnvVariable", logPrintln_.getArg(0));
-    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -309,10 +305,6 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
     
-    assertEquals("The following command line argument was NOT provided for command " +
-        "classpath2eclipse using default 'FAB_REPO';\n" +
-        "eclipseEnvVariable", logPrintln_.getArg(0));
-    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
@@ -1033,10 +1025,6 @@ public class FabricateClasspathToEclipse4ishConverterTrial extends MockitoSource
             , new String(bytes));
     assertSame(out, writeFileMethod.getArgs(0)[1]);
     
-    assertEquals("The following command line argument was NOT provided for command " +
-        "classpath2eclipse using default 'FAB_REPO';\n" +
-        "eclipseEnvVariable", logPrintln_.getArg(0));
-    assertEquals(1, logPrintln_.count());
   }
   
   @SuppressWarnings({"boxing", "unchecked"})
